@@ -33,6 +33,356 @@ const app = new App({
     appToken: process.env.SLACK_APP_TOKEN
 });
 
+// Add this after your existing dependencies
+// Add this after your existing dependencies
+const axios = require('axios');
+
+// Helper function to extract request details from message
+function extractRequestFromMessage(message) {
+    if (!message.blocks) return null;
+    
+    // Check if this is a request message (has header with "Request")
+    const headerBlock = message.blocks.find(block => 
+        block.type === 'header' && 
+        block.text?.text?.includes('Request')
+    );
+    
+    if (!headerBlock) return null;
+    
+    // Extract message text from section block
+    const sectionBlock = message.blocks.find(block => 
+        block.type === 'section' && 
+        block.text?.text?.includes('*Message:*')
+    );
+    
+    let messageText = '';
+    if (sectionBlock) {
+        messageText = sectionBlock.text.text
+            .replace('*Message:*\n> ', '')
+            .replace(/\n>/g, '\n')
+            .replace(/&gt;/g, '') // Remove HTML entities
+            .trim();
+    }
+    
+    // Extract request type from header
+    let requestType = 'Task';
+    const headerText = headerBlock.text.text;
+    if (headerText.includes('Question')) requestType = 'Question';
+    else if (headerText.includes('Feature')) requestType = 'Feature';
+    else if (headerText.includes('Bug')) requestType = 'Bug';
+    
+    // Extract reporter from context block
+    let reporter = '';
+    const contextBlock = message.blocks.find(block => block.type === 'context');
+    if (contextBlock && contextBlock.elements && contextBlock.elements[0]) {
+        const contextText = contextBlock.elements[0].text;
+        const userMatch = contextText.match(/<@(\w+)>/);
+        if (userMatch) {
+            reporter = userMatch[1];
+        }
+    }
+    
+    return {
+        messageText,
+        requestType,
+        reporter,
+        isValidRequest: true
+    };
+}
+
+// Function to create Jira ticket from request message
+async function createJiraTicketFromRequest(messageText, requestType, reporter) {
+    try {
+        // Clean the message text - remove newlines and extra whitespace
+        const cleanMessageText = messageText.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+        
+        // Create summary from first part of message (max 80 chars, no newlines)
+        const summary = `${requestType}: ${cleanMessageText.substring(0, 80)}${cleanMessageText.length > 80 ? '...' : ''}`;
+        
+        // For description, preserve the original formatting but clean it up
+        const cleanDescription = messageText.trim();
+        
+        const ticketData = {
+            fields: {
+                project: {
+                    key: process.env.JIRA_PROJECT_KEY
+                },
+                summary: summary,
+                description: {
+                    type: "doc",
+                    version: 1,
+                    content: [
+                        {
+                            type: "paragraph",
+                            content: [
+                                {
+                                    type: "text",
+                                    text: cleanDescription
+                                }
+                            ]
+                        }
+                    ]
+                },
+                issuetype: {
+                    name: "Task"
+                }
+            }
+        };
+
+        const response = await axios.post(
+            `${process.env.JIRA_BASE_URL}/rest/api/3/issue`,
+            ticketData,
+            {
+                auth: {
+                    username: process.env.JIRA_EMAIL,
+                    password: process.env.JIRA_API_TOKEN
+                },
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        return {
+            success: true,
+            ticket: response.data,
+            ticketUrl: `${process.env.JIRA_BASE_URL}/browse/${response.data.key}`
+        };
+    } catch (error) {
+        console.error('Jira ticket creation failed:', error.response?.data || error.message);
+        return {
+            success: false,
+            error: error.response?.data?.errors || error.message
+        };
+    }
+}
+
+// Simple function to create a test Jira ticket
+async function createSimpleJiraTicket(summary) {
+    try {
+        const ticketData = {
+            fields: {
+                project: {
+                    key: process.env.JIRA_PROJECT_KEY
+                },
+                summary: summary,
+                description: {
+                    type: "doc",
+                    version: 1,
+                    content: [
+                        {
+                            type: "paragraph",
+                            content: [
+                                {
+                                    type: "text",
+                                    text: "This is a test"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                issuetype: {
+                    name: "Task"  // Using Task as default issue type
+                }
+            }
+        };
+
+        const response = await axios.post(
+            `${process.env.JIRA_BASE_URL}/rest/api/3/issue`,
+            ticketData,
+            {
+                auth: {
+                    username: process.env.JIRA_EMAIL,
+                    password: process.env.JIRA_API_TOKEN
+                },
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        return {
+            success: true,
+            ticket: response.data,
+            ticketUrl: `${process.env.JIRA_BASE_URL}/browse/${response.data.key}`
+        };
+    } catch (error) {
+        console.error('Jira ticket creation failed:', error.response?.data || error.message);
+        return {
+            success: false,
+            error: error.response?.data?.errors || error.message
+        };
+    }
+}
+
+// Simple test shortcut - just creates a basic ticket
+app.shortcut('test_jira_shortcut', async ({ shortcut, ack, client }) => {
+    try {
+        await ack();
+
+        console.log('Test shortcut triggered'); // Debug log
+
+        // Create a simple test ticket
+        const result = await createSimpleJiraTicket("Test ticket from message shortcut");
+
+        if (result.success) {
+            await client.chat.postEphemeral({
+                channel: shortcut.channel.id,
+                user: shortcut.user.id,
+                text: `✅ Test ticket created: ${result.ticket.key} - ${result.ticketUrl}`
+            });
+        } else {
+            await client.chat.postEphemeral({
+                channel: shortcut.channel.id,
+                user: shortcut.user.id,
+                text: `❌ Failed to create test ticket: ${JSON.stringify(result.error)}`
+            });
+        }
+
+    } catch (error) {
+        console.error('Test shortcut error:', error);
+        await client.chat.postEphemeral({
+            channel: shortcut.channel.id,
+            user: shortcut.user.id,
+            text: "❌ Test shortcut failed"
+        });
+    }
+});
+
+// Message shortcut handler for creating Jira tickets
+app.shortcut('create_jira_ticket', async ({ shortcut, ack, client }) => {
+    try {
+        await ack();
+
+        console.log('Shortcut triggered:', JSON.stringify(shortcut, null, 2)); // Debug log
+
+        // Get the message that the shortcut was triggered on
+        const message = shortcut.message;
+        
+        if (!message) {
+            await client.chat.postEphemeral({
+                channel: shortcut.channel.id,
+                user: shortcut.user.id,
+                text: "❌ Could not access the message. Please try again."
+            });
+            return;
+        }
+
+        // Extract request details from the message
+        const requestDetails = extractRequestFromMessage(message);
+        
+        if (!requestDetails || !requestDetails.isValidRequest) {
+            await client.chat.postEphemeral({
+                channel: shortcut.channel.id,
+                user: shortcut.user.id,
+                text: "❌ This message is not a valid request created with `/request`. Please use this shortcut only on request messages."
+            });
+            return;
+        }
+
+        if (!requestDetails.messageText) {
+            await client.chat.postEphemeral({
+                channel: shortcut.channel.id,
+                user: shortcut.user.id,
+                text: "❌ Could not extract message content from this request."
+            });
+            return;
+        }
+
+        // Create Jira ticket
+        const result = await createJiraTicketFromRequest(
+            requestDetails.messageText,
+            requestDetails.requestType,
+            requestDetails.reporter
+        );
+
+        if (result.success) {
+            // Post success message as a thread reply
+            await client.chat.postMessage({
+                channel: shortcut.channel.id,
+                thread_ts: message.ts,
+                text: `🎫 Jira ticket created from request!`,
+                blocks: [
+                    {
+                        type: "section",
+                        text: {
+                            type: "mrkdwn",
+                            text: `🎫 *Jira Ticket Created*\n\n*Ticket:* <${result.ticketUrl}|${result.ticket.key}>\n*Type:* ${requestDetails.requestType}\n*Reporter:* <@${requestDetails.reporter}>\n*Created by:* <@${shortcut.user.id}>`
+                        }
+                    }
+                ]
+            });
+
+            // Also send ephemeral confirmation to the user who triggered it
+            await client.chat.postEphemeral({
+                channel: shortcut.channel.id,
+                user: shortcut.user.id,
+                text: `✅ Successfully created Jira ticket: ${result.ticket.key}`
+            });
+
+        } else {
+            await client.chat.postEphemeral({
+                channel: shortcut.channel.id,
+                user: shortcut.user.id,
+                text: `❌ Failed to create Jira ticket: ${JSON.stringify(result.error)}`
+            });
+        }
+
+    } catch (error) {
+        console.error('Message shortcut error:', error);
+        await client.chat.postEphemeral({
+            channel: shortcut.channel.id,
+            user: shortcut.user.id,
+            text: "❌ Something went wrong while creating the Jira ticket."
+        });
+    }
+});
+
+// Add this command handler after your existing /request command
+app.command('/createticket', async ({ command, ack, client }) => {
+    try {
+        await ack();
+
+        const summary = command.text.trim() || "Test ticket from Slack";
+
+        // Create the Jira ticket
+        const result = await createSimpleJiraTicket(summary);
+
+        if (result.success) {
+            await client.chat.postMessage({
+                channel: command.channel_id,
+                text: `✅ Jira ticket created successfully!`,
+                blocks: [
+                    {
+                        type: "section",
+                        text: {
+                            type: "mrkdwn",
+                            text: `🎫 *Jira Ticket Created*\n\n*Ticket:* <${result.ticketUrl}|${result.ticket.key}>\n*Summary:* ${summary}\n*Description:* This is a test\n*Created by:* <@${command.user_id}>`
+                        }
+                    }
+                ]
+            });
+        } else {
+            await client.chat.postEphemeral({
+                channel: command.channel_id,
+                user: command.user_id,
+                text: `❌ Failed to create Jira ticket: ${JSON.stringify(result.error)}`
+            });
+        }
+
+    } catch (error) {
+        console.error('Create ticket command error:', error);
+        await client.chat.postEphemeral({
+            channel: command.channel_id,
+            user: command.user_id,
+            text: "❌ Something went wrong while creating the Jira ticket."
+        });
+    }
+});
+
+
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
