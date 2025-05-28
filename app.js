@@ -34,7 +34,6 @@ const app = new App({
 });
 
 // Add this after your existing dependencies
-// Add this after your existing dependencies
 const axios = require('axios');
 
 // Helper function to extract request details from message
@@ -90,8 +89,72 @@ function extractRequestFromMessage(message) {
     };
 }
 
+// Function to get user display name
+async function getUserDisplayName(client, userId) {
+    try {
+        const result = await client.users.info({
+            user: userId
+        });
+        
+        if (result.ok && result.user) {
+            // Prefer display_name, fall back to real_name, then to name
+            return result.user.profile?.display_name || 
+                   result.user.profile?.real_name || 
+                   result.user.name || 
+                   `Unknown User (${userId})`;
+        }
+        return `Unknown User (${userId})`;
+    } catch (error) {
+        console.error(`Error fetching user info for ${userId}:`, error);
+        return `Unknown User (${userId})`;
+    }
+}
+
+// Function to fetch thread messages
+async function getThreadMessages(client, channel, threadTs) {
+    try {
+        const result = await client.conversations.replies({
+            channel: channel,
+            ts: threadTs,
+            inclusive: true
+        });
+        
+        if (result.ok && result.messages) {
+            // Filter out the original message and return only replies
+            const replies = result.messages.slice(1);
+            const messagesWithUserNames = [];
+            
+            for (const msg of replies) {
+                const userId = msg.user;
+                const timestamp = new Date(parseFloat(msg.ts) * 1000).toLocaleString();
+                let messageText = msg.text || '';
+                
+                // Handle bot messages differently
+                if (msg.bot_id) {
+                    messageText = msg.text || 'Bot message (no text content)';
+                }
+                
+                // Get user display name
+                const userName = userId ? await getUserDisplayName(client, userId) : 'Unknown User';
+                
+                messagesWithUserNames.push({
+                    user: userName,
+                    timestamp: timestamp,
+                    text: messageText
+                });
+            }
+            
+            return messagesWithUserNames;
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching thread messages:', error);
+        return [];
+    }
+}
+
 // Function to create Jira ticket from request message
-async function createJiraTicketFromRequest(messageText, requestType, reporter) {
+async function createJiraTicketFromRequest(messageText, requestType, reporter, client, channel, messageTs, teamId) {
     try {
         // Clean the message text - remove newlines and extra whitespace
         const cleanMessageText = messageText.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
@@ -99,8 +162,27 @@ async function createJiraTicketFromRequest(messageText, requestType, reporter) {
         // Create summary from first part of message (max 80 chars, no newlines)
         const summary = `${requestType}: ${cleanMessageText.substring(0, 80)}${cleanMessageText.length > 80 ? '...' : ''}`;
         
-        // For description, preserve the original formatting but clean it up
-        const cleanDescription = messageText.trim();
+        // Get reporter display name
+        const reporterName = await getUserDisplayName(client, reporter);
+        
+        // Get thread messages
+        const threadMessages = await getThreadMessages(client, channel, messageTs);
+        
+        // Build Slack thread URL
+        const slackThreadUrl = `https://app.slack.com/client/${teamId}/${channel}/thread/${messageTs.replace('.', '')}`;
+        
+        // Build description with original message and thread replies
+        let fullDescription = `**Original Request:**\n${messageText.trim()}\n**Reported by:** ${reporterName}`;
+        
+        if (threadMessages.length > 0) {
+            fullDescription += '\n\n**Thread Discussion:**\n';
+            threadMessages.forEach((msg, index) => {
+                fullDescription += `\n**Reply ${index + 1}** (by ${msg.user} at ${msg.timestamp}):\n${msg.text}\n`;
+            });
+        }
+        
+        // Add Slack thread link at the end
+        fullDescription += `\n\n**Slack Thread:** ${slackThreadUrl}`;
         
         const ticketData = {
             fields: {
@@ -117,7 +199,7 @@ async function createJiraTicketFromRequest(messageText, requestType, reporter) {
                             content: [
                                 {
                                     type: "text",
-                                    text: cleanDescription
+                                    text: fullDescription
                                 }
                             ]
                         }
@@ -295,7 +377,11 @@ app.shortcut('create_jira_ticket', async ({ shortcut, ack, client }) => {
         const result = await createJiraTicketFromRequest(
             requestDetails.messageText,
             requestDetails.requestType,
-            requestDetails.reporter
+            requestDetails.reporter,
+            client,
+            shortcut.channel.id,
+            message.ts,
+            shortcut.team.id
         );
 
         if (result.success) {
@@ -381,7 +467,6 @@ app.command('/createticket', async ({ command, ack, client }) => {
         });
     }
 });
-
 
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
