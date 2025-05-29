@@ -1,0 +1,39 @@
+├── src/
+│   ├── app.js                 # Main application entry point
+│   ├── config/
+│   │   └── index.js          # Configuration management
+│   ├── constants/
+│   │   └── enums.js          # All enums and constants
+│   ├── handlers/
+│   │   ├── commands/
+│   │   │   └── request.js    # /request slash command handler
+│   │   ├── shortcuts/
+│   │   │   └── jira.js       # Jira ticket creation shortcut
+│   │   ├── actions/
+│   │   │   ├── status.js     # Status selection actions
+│   │   │   ├── priority.js   # Priority selection actions
+│   │   │   ├── assignee.js   # Assignee selection actions
+│   │   │   └── submit.js     # Form submission actions
+│   │   └── messages/
+│   │       └── intercept.js  # Message interception logic
+│   ├── services/
+│   │   ├── jira/
+│   │   │   ├── client.js     # Jira API client
+│   │   │   └── ticket.js     # Ticket creation logic
+│   │   ├── slack/
+│   │   │   ├── client.js     # Slack client utilities
+│   │   │   ├── user.js       # User-related operations
+│   │   │   └── thread.js     # Thread operations
+│   │   └── request/
+│   │       ├── parser.js     # Request message parsing
+│   │       └── handler.js    # Core request handling logic
+│   ├── utils/
+│   │   ├── formatters.js     # Text formatting utilities
+│   │   ├── validators.js     # Input validation
+│   │   └── blocks.js         # Slack block kit builders
+│   └── middleware/
+│       └── channel.js        # Channel filtering middleware
+├── .env.example
+├── .gitignore
+├── package.json
+└── README.md
