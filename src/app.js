@@ -9,6 +9,8 @@ const priorityActionHandler = require('./handlers/actions/priority.js');
 const assigneeActionHandler = require('./handlers/actions/assignee.js');
 const submitActionHandler = require('./handlers/actions/submit.js');
 const messageInterceptHandler = require('./handlers/messages/intercept.js');
+const { transferShortcutHandler, handleTransferModal } = require('./handlers/shortcuts/transfer');
+
 
 // Validate configuration
 try {
@@ -29,11 +31,13 @@ const app = new App({
 // Register handlers
 app.command('/request', requestCommandHandler);
 app.shortcut('create_jira_ticket', jiraShortcutHandler);
+app.shortcut('transfer', transferShortcutHandler);
 app.action('status_select', statusActionHandler);
 app.action('priority_select', priorityActionHandler);
 app.action('assignee_select', assigneeActionHandler);
 app.action('submit_request_button', submitActionHandler);
 app.message(messageInterceptHandler);
+app.view('transfer_request_modal', handleTransferModal);
 
 // Start the app
 (async () => {

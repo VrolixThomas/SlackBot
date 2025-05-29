@@ -1,26 +1,6 @@
-const { PRIORITIES, STATUSES, REQUEST_TYPES } = require('../constants/enums');
+const { PRIORITIES, STATUSES, REQUEST_TYPES, getPriorityOptions, getRequestTypeOptions, getStatusOptions } = require('../constants/enums');
 const { capitalize } = require('./formatters');
 
-function getPriorityOptions() {
-    return Object.values(PRIORITIES).map(priority => ({
-        text: { type: "plain_text", text: capitalize(priority) },
-        value: priority
-    }));
-}
-
-function getStatusOptions() {
-    return Object.values(STATUSES).map(status => ({
-        text: { type: "plain_text", text: status.split('_').map(capitalize).join(' ') },
-        value: status
-    }));
-}
-
-function getRequestTypeOptions() {
-    return Object.values(REQUEST_TYPES).map(type => ({
-        text: { type: "plain_text", text: type },
-        value: type
-    }));
-}
 
 function buildRequestBlocks(type, user, messageText, priority) {
     return [

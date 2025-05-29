@@ -10,7 +10,7 @@
 │   │   ├── shortcuts/
 │   │   │   └── jira.js       # Jira ticket creation shortcut
 │   │   ├── actions/
-│   │   │   ├── status.js     # Status selection actions
+│   │   │   ├── status.js     # Staatus selection actions
 │   │   │   ├── priority.js   # Priority selection actions
 │   │   │   ├── assignee.js   # Assignee selection actions
 │   │   │   └── submit.js     # Form submission actions

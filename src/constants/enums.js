@@ -1,3 +1,5 @@
+const { capitalize } = require('../utils/formatters');
+
 const PRIORITIES = {
     LOW: 'low',
     MEDIUM: 'medium',
@@ -33,10 +35,41 @@ const TYPE_SHORTCUTS = {
     'b': REQUEST_TYPES.BUG
 };
 
+// Helper function to get request type options
+function getRequestTypeOptions() {
+    return Object.values(REQUEST_TYPES).map(type => ({
+        text: {
+            type: 'plain_text',
+            text: type
+        },
+        value: type
+    }));
+}
+
+// Helper function to get priority options
+function getPriorityOptions() {
+    return Object.values(PRIORITIES).map(priority => ({
+        text: {
+            type: 'plain_text',
+            text: capitalize(priority)
+        },
+        value: priority
+    }));
+}
+
+function getStatusOptions() {
+    return Object.values(STATUSES).map(status => ({
+        text: { type: "plain_text", text: status.split('_').map(capitalize).join(' ') },
+        value: status
+    }));
+}
 module.exports = {
     PRIORITIES,
     STATUSES,
     REQUEST_TYPES,
     PRIORITY_SHORTCUTS,
-    TYPE_SHORTCUTS
+    TYPE_SHORTCUTS,
+    getRequestTypeOptions,
+    getPriorityOptions,
+    getStatusOptions,
 };
