@@ -1,48 +1,20 @@
 const JiraClient = require('./client');
 const { config } = require('../../config');
-const { getUserDisplayName, getUserEmail } = require('../slack/user');
-const { getThreadMessages, getAssigneeFromThread } = require('../slack/thread');
-const { createSummary, buildSlackThreadUrl, formatJiraDescription } = require('../../utils/formatters');
+const { buildSlackThreadUrl } = require('../../utils/formatters');
 
-async function createJiraTicketFromRequest(messageText, requestType, reporter, assigneeFromBlocks, client, channel, messageTs, teamId) {
+async function createJiraTicketFromRequest(summary, description, reporter, assignee, board, client, channel, messageTs, teamId) {
     try {
-        const jiraClient = new JiraClient();
-        
-        // Get the actual assignee from the thread
-        const assignee = await getAssigneeFromThread(client, channel, messageTs);
-        
-        // Create summary from message text
-        const summary = createSummary(requestType, messageText);
-        
-        // Get reporter display name
-        const reporterName = await getUserDisplayName(client, reporter);
-        
-        // Get assignee display name if assignee exists
-        let assigneeName = '';
-        if (assignee) {
-            assigneeName = await getUserDisplayName(client, assignee);
-        }
-        
-        // Get thread messages
-        const threadMessages = await getThreadMessages(client, channel, messageTs);
+        const jiraClient = new JiraClient();        
         
         // Build Slack thread URL
         const slackThreadUrl = buildSlackThreadUrl(teamId, channel, messageTs);
-        
-        // Build description
-        const fullDescription = formatJiraDescription(
-            messageText, 
-            reporterName, 
-            assigneeName, 
-            threadMessages, 
-            slackThreadUrl
-        );
-        
+        description += `\n\n**Slack Thread:** ${slackThreadUrl}`;
+
         // Build ticket data
         const ticketData = {
             fields: {
                 project: {
-                    key: config.jira.projectKey
+                    key: board
                 },
                 summary: summary,
                 description: {
@@ -54,31 +26,20 @@ async function createJiraTicketFromRequest(messageText, requestType, reporter, a
                             content: [
                                 {
                                     type: "text",
-                                    text: fullDescription
+                                    text: description
                                 }
                             ]
                         }
                     ]
+                },
+                assignee: {
+                    accountId: (await jiraClient.GetUserAccountId(assignee)).data
                 },
                 issuetype: {
                     name: "Task"
                 }
             }
         };
-        
-        // Add assignee to Jira ticket if one was found in the thread
-        if (assignee) {
-            try {
-                const userEmail = await getUserEmail(client, assignee);
-                if (userEmail) {
-                    ticketData.fields.assignee = {
-                        emailAddress: userEmail
-                    };
-                }
-            } catch (error) {
-                console.log('Could not set assignee in Jira:', error.message);
-            }
-        }
 
         const result = await jiraClient.createIssue(ticketData);
         

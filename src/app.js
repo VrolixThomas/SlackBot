@@ -3,13 +3,13 @@ const { config, validateConfig } = require('./config');
 
 // Import handlers
 const requestCommandHandler = require('./handlers/commands/request.js');
-const jiraShortcutHandler = require('./handlers/shortcuts/jira.js');
 const statusActionHandler = require('./handlers/actions/status.js');
 const priorityActionHandler = require('./handlers/actions/priority.js');
 const assigneeActionHandler = require('./handlers/actions/assignee.js');
 const submitActionHandler = require('./handlers/actions/submit.js');
 const messageInterceptHandler = require('./handlers/messages/intercept.js');
 const { transferShortcutHandler, handleTransferModal } = require('./handlers/shortcuts/transfer');
+const { jiraShortcutHandler, handleJiraTicketModalSubmission } = require('./handlers/shortcuts/jira');
 
 
 // Validate configuration
@@ -38,6 +38,7 @@ app.action('assignee_select', assigneeActionHandler);
 app.action('submit_request_button', submitActionHandler);
 app.message(messageInterceptHandler);
 app.view('transfer_request_modal', handleTransferModal);
+app.view('jira_ticket_modal', handleJiraTicketModalSubmission);
 
 // Start the app
 (async () => {

@@ -1,4 +1,4 @@
-const { PRIORITIES, STATUSES, REQUEST_TYPES, getPriorityOptions, getRequestTypeOptions, getStatusOptions } = require('../constants/enums');
+const { PRIORITIES, STATUSES, REQUEST_TYPES, REQUEST_TYPE_ICONS, getPriorityOptions, getRequestTypeOptions, getStatusOptions } = require('../constants/enums');
 const { capitalize } = require('./formatters');
 
 
@@ -8,7 +8,7 @@ function buildRequestBlocks(type, user, messageText, priority) {
             type: "header",
             text: {
                 type: "plain_text",
-                text: `🚨 ${type} Request`,
+                text: `${REQUEST_TYPE_ICONS[type]} ${type} Request`,
                 emoji: true
             }
         },

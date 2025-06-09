@@ -15,12 +15,9 @@ function buildSlackThreadUrl(teamId, channel, messageTs) {
     return `https://app.slack.com/client/${teamId}/${channel}/thread/${messageTs.replace('.', '')}`;
 }
 
-function formatJiraDescription(messageText, reporterName, assigneeName, threadMessages, slackThreadUrl) {
-    let description = `**Original Request:**\n${messageText.trim()}\n\n**Reported by:** ${reporterName}`;
+function formatJiraDescription(messageText, threadMessages) {
+    let description = `**Original Request:**\n${messageText.trim()}\n`;
     
-    if (assigneeName) {
-        description += `\n**Assigned to:** ${assigneeName}`;
-    }
     
     if (threadMessages.length > 0) {
         description += '\n\n**Thread Discussion:**\n';
@@ -29,7 +26,6 @@ function formatJiraDescription(messageText, reporterName, assigneeName, threadMe
         });
     }
     
-    description += `\n\n**Slack Thread:** ${slackThreadUrl}`;
     return description;
 }
 

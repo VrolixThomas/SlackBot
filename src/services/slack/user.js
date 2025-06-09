@@ -17,20 +17,6 @@ async function getUserDisplayName(client, userId) {
     }
 }
 
-async function getUserEmail(client, userId) {
-    try {
-        const result = await client.users.info({ user: userId });
-        if (result.ok && result.user && result.user.profile && result.user.profile.email) {
-            return result.user.profile.email;
-        }
-        return null;
-    } catch (error) {
-        console.error(`Error fetching user email for ${userId}:`, error);
-        return null;
-    }
-}
-
 module.exports = {
-    getUserDisplayName,
-    getUserEmail
+    getUserDisplayName
 };

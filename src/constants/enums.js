@@ -17,7 +17,8 @@ const STATUSES = {
 const REQUEST_TYPES = {
     QUESTION: 'Question',
     FEATURE: 'Feature',
-    BUG: 'Bug'
+    BUG: 'Bug',
+    DISCUSSION: 'Discussion',
 };
 
 // Priority expansion mappings
@@ -32,8 +33,17 @@ const PRIORITY_SHORTCUTS = {
 const TYPE_SHORTCUTS = {
     'q': REQUEST_TYPES.QUESTION,
     'f': REQUEST_TYPES.FEATURE,
-    'b': REQUEST_TYPES.BUG
+    'b': REQUEST_TYPES.BUG,
+    'd': REQUEST_TYPES.DISCUSSION
 };
+
+const REQUEST_TYPE_ICONS = {
+    [REQUEST_TYPES.QUESTION]: '❓',
+    [REQUEST_TYPES.FEATURE]: '🌟',
+    [REQUEST_TYPES.BUG]: '🐞',
+    [REQUEST_TYPES.DISCUSSION]: '💬',
+};
+
 
 // Helper function to get request type options
 function getRequestTypeOptions() {
@@ -69,6 +79,7 @@ module.exports = {
     REQUEST_TYPES,
     PRIORITY_SHORTCUTS,
     TYPE_SHORTCUTS,
+    REQUEST_TYPE_ICONS,
     getRequestTypeOptions,
     getPriorityOptions,
     getStatusOptions,

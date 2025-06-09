@@ -46,37 +46,6 @@ async function getThreadMessages(client, channel, threadTs) {
     }
 }
 
-async function getAssigneeFromThread(client, channel, threadTs) {
-    try {
-        const result = await client.conversations.replies({
-            channel: channel,
-            ts: threadTs,
-            inclusive: true
-        });
-        
-        if (result.ok && result.messages) {
-            const assignmentMessage = result.messages.find(msg => {
-                if (msg.bot_id && msg.text) {
-                    return msg.text.includes("you've been assigned to this request!");
-                }
-                return false;
-            });
-            
-            if (assignmentMessage && assignmentMessage.text) {
-                const userMatch = assignmentMessage.text.match(/<@(\w+)>/);
-                if (userMatch) {
-                    return userMatch[1];
-                }
-            }
-        }
-        return null;
-    } catch (error) {
-        console.error('Error fetching assignee from thread:', error);
-        return null;
-    }
-}
-
 module.exports = {
     getThreadMessages,
-    getAssigneeFromThread
 };
