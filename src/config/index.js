@@ -17,6 +17,11 @@ const config = {
         port: process.env.PORT || 3000,
         targetChannelNames: process.env.TARGET_CHANNEL_NAMES ? 
             process.env.TARGET_CHANNEL_NAMES.split(',').map(name => name.trim().toLowerCase()) : [],
+    },
+    bitbucket: {
+        workspace: process.env.BITBUCKET_WORKSPACE,  
+        username: process.env.BITBUCKET_USERNAME,  
+        appPassword: process.env.BITBUCKET_APP_PASSWORD
     }
 };
 

@@ -3,6 +3,7 @@ const { config, validateConfig } = require('./config');
 
 // Import handlers
 const requestCommandHandler = require('./handlers/commands/request.js');
+const standupCommandHandler = require('./handlers/commands/standup.js');
 const statusActionHandler = require('./handlers/actions/status.js');
 const priorityActionHandler = require('./handlers/actions/priority.js');
 const assigneeActionHandler = require('./handlers/actions/assignee.js');
@@ -10,7 +11,7 @@ const submitActionHandler = require('./handlers/actions/submit.js');
 const messageInterceptHandler = require('./handlers/messages/intercept.js');
 const { transferShortcutHandler, handleTransferModal } = require('./handlers/shortcuts/transfer');
 const { jiraShortcutHandler, handleJiraTicketModalSubmission } = require('./handlers/shortcuts/jira');
-
+const { handleStandupModalSubmission } = require('./handlers/modals/standup');
 
 // Validate configuration
 try {
@@ -29,16 +30,18 @@ const app = new App({
 });
 
 // Register handlers
-app.command('/request', requestCommandHandler);
-app.shortcut('create_jira_ticket', jiraShortcutHandler);
-app.shortcut('transfer', transferShortcutHandler);
-app.action('status_select', statusActionHandler);
-app.action('priority_select', priorityActionHandler);
-app.action('assignee_select', assigneeActionHandler);
-app.action('submit_request_button', submitActionHandler);
-app.message(messageInterceptHandler);
-app.view('transfer_request_modal', handleTransferModal);
-app.view('jira_ticket_modal', handleJiraTicketModalSubmission);
+//app.command('/request', requestCommandHandler);
+app.command('/standup', standupCommandHandler);
+//app.shortcut('create_jira_ticket', jiraShortcutHandler);
+//app.shortcut('transfer', transferShortcutHandler);
+//app.action('status_select', statusActionHandler);
+//app.action('priority_select', priorityActionHandler);
+//app.action('assignee_select', assigneeActionHandler);
+//app.action('submit_request_button', submitActionHandler);
+//app.message(messageInterceptHandler);
+//app.view('transfer_request_modal', handleTransferModal);
+//app.view('jira_ticket_modal', handleJiraTicketModalSubmission);
+app.view('standup_modal', handleStandupModalSubmission);
 
 // Start the app
 (async () => {
