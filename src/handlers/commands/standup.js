@@ -1,9 +1,6 @@
 // handlers/commands/standup.js
 
-const { getMockBitbucketPRs } = require('../../utils/mockData');
 const JiraClient = require('../../services/jira/client');
-const BitbucketClient = require('../../services/bitbucket/client');
-
 
 // Function to format status with brackets and styling
 const formatStatus = (status) => {
@@ -63,15 +60,6 @@ const standupCommandHandler = async ({ command, ack, client, body }) => {
             },
             value: "no_tickets"
         }];
-
-    // Build PR display blocks
-    // const prBlocks = bitbucketPRs.data.map(pr => ({
-    //     type: "section",
-    //     text: {
-    //         type: "mrkdwn",
-    //         text: `• <${pr.url}|${pr.title}> - ${pr.repository} (${pr.status})`
-    //     }
-    // }));
 
     const modal = {
         type: "modal",
