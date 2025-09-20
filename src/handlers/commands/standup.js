@@ -7,11 +7,49 @@ const formatStatus = (status) => {
     return `*[${status.toUpperCase()}]*`;
 };
 
+// Function to parse time string and convert to Unix timestamp
+const parseScheduleTime = (timeString) => {
+    if (!timeString) return null;
+    
+    // Match formats like 0900, 09:00, 9:00, 18:30, etc.
+    const timeMatch = timeString.match(/^(\d{1,2}):?(\d{2})$/);
+    if (!timeMatch) return null;
+    
+    const hours = parseInt(timeMatch[1]);
+    const minutes = parseInt(timeMatch[2]);
+    
+    // Validate time
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        return null;
+    }
+    
+    // Create a Date object for today at the specified time
+    const now = new Date();
+    let scheduledTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+    
+    // If the time has already passed today, schedule for next day
+    if (scheduledTime <= now) {
+        scheduledTime.setDate(scheduledTime.getDate() + 1);
+    }
+    
+    // Skip weekends - if it falls on Saturday (6) or Sunday (0), move to Monday
+    while (scheduledTime.getDay() === 0 || scheduledTime.getDay() === 6) {
+        scheduledTime.setDate(scheduledTime.getDate() + 1);
+    }
+    
+    // Return Unix timestamp
+    return Math.floor(scheduledTime.getTime() / 1000);
+};
+
 const standupCommandHandler = async ({ command, ack, client, body }) => {
     await ack();
 
     const userId = body.user_id;
     const userName = body.user_name;
+    const commandText = command.text || '';
+    
+    // Parse the schedule time from command text
+    const scheduleTime = parseScheduleTime(commandText.trim());
     
     // Get user's email from Slack (assuming it matches Jira email)
     let last_name;
@@ -61,21 +99,30 @@ const standupCommandHandler = async ({ command, ack, client, body }) => {
             value: "no_tickets"
         }];
 
+    // Create modal title based on whether it's scheduled or not
+    const modalTitle = scheduleTime ? "Schedule Daily Standup" : "Daily Standup";
+    const scheduledTimeString = scheduleTime ? new Date(scheduleTime * 1000).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+    }) : null;
+
     const modal = {
         type: "modal",
         callback_id: "standup_modal",
         private_metadata: JSON.stringify({
             channel_id: command.channel_id,
             user_name: userName,
-            jira_accountId: jirauser_accoundId
+            jira_accountId: jirauser_accoundId,
+            schedule_time: scheduleTime
         }),
         title: {
             type: "plain_text",
-            text: "Daily Standup"
+            text: modalTitle
         },
         submit: {
             type: "plain_text",
-            text: "Submit"
+            text: scheduleTime ? "Schedule" : "Submit"
         },
         close: {
             type: "plain_text",
@@ -86,7 +133,7 @@ const standupCommandHandler = async ({ command, ack, client, body }) => {
                 type: "section",
                 text: {
                     type: "mrkdwn",
-                    text: `*Daily Standup for ${userName}*\n_${new Date().toDateString()}_`
+                    text: `*${modalTitle} for ${userName}*\n_${new Date().toDateString()}_${scheduleTime ? `\n:clock1: *Scheduled for: ${scheduledTimeString}*` : ''}`
                 }
             },
             {
@@ -234,23 +281,19 @@ const standupCommandHandler = async ({ command, ack, client, body }) => {
             },
             {
                 type: "divider"
-            },
-            // {
-            //     type: "section",
-            //     text: {
-            //         type: "mrkdwn",
-            //         text: "*Open Pull Requests*"
-            //     }
-            // },
-            // ...(prBlocks.length > 0 ? prBlocks : [{
-            //     type: "section",
-            //     text: {
-            //         type: "mrkdwn",
-            //         text: "_No open pull requests_"
-            //     }
-            // }])
+            }
         ]
     };
+
+    // Validate schedule time and show error if invalid
+    if (commandText.trim() && !scheduleTime) {
+        await client.chat.postEphemeral({
+            channel: command.channel_id,
+            user: userId,
+            text: `Invalid time format: "${commandText.trim()}". Please use format like 0900, 09:00, or 1830.`
+        });
+        return;
+    }
 
     try {
         await client.views.open({
