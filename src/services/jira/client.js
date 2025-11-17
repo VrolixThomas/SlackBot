@@ -304,6 +304,155 @@ class JiraClient {
     buildTicketUrl(issueKey) {
         return `${this.baseUrl}/browse/${issueKey}`;
     }
+
+    async getIssueTypes(projectKey) {
+        try {
+            const response = await axios.get(
+                `${this.baseUrl}/rest/api/3/issue/createmeta`,
+                {
+                    params: {
+                        projectKeys: projectKey,
+                        expand: 'projects.issuetypes'
+                    },
+                    auth: this.auth,
+                    headers: this.headers
+                }
+            );
+
+            if (response.data.projects.length === 0) {
+                return { success: false, error: 'Project not found' };
+            }
+
+            const issueTypes = response.data.projects[0].issuetypes;
+            return { success: true, data: issueTypes };
+        } catch (error) {
+            console.error('Jira API error:', error.response?.data || error.message);
+            return {
+                success: false,
+                error: error.response?.data?.errors || error.message
+            };
+        }
+    }
+
+    async createEpic(projectKey, epicName, assigneeAccountId) {
+        try {
+            // First get issue types to find the Epic type
+            const issueTypesResult = await this.getIssueTypes(projectKey);
+            if (!issueTypesResult.success) {
+                return issueTypesResult;
+            }
+
+            const epicType = issueTypesResult.data.find(type => type.name === 'Epic');
+            if (!epicType) {
+                return { success: false, error: 'Epic issue type not found in project' };
+            }
+
+            const epicData = {
+                fields: {
+                    project: {
+                        key: projectKey
+                    },
+                    summary: epicName,
+                    issuetype: {
+                        id: epicType.id
+                    },
+                    assignee: {
+                        accountId: assigneeAccountId
+                    }
+                }
+            };
+
+            const response = await axios.post(
+                `${this.baseUrl}/rest/api/3/issue`,
+                epicData,
+                {
+                    auth: this.auth,
+                    headers: this.headers
+                }
+            );
+
+            return {
+                success: true,
+                data: {
+                    key: response.data.key,
+                    id: response.data.id,
+                    url: this.buildTicketUrl(response.data.key)
+                }
+            };
+        } catch (error) {
+            console.error('Jira API error creating epic:', error.response?.data || error.message);
+            return {
+                success: false,
+                error: error.response?.data?.errors || error.message
+            };
+        }
+    }
+
+    async createTaskInEpic(projectKey, taskSummary, taskDescription, epicKey, assigneeAccountId, storyPoints = null) {
+        try {
+            const taskData = {
+                fields: {
+                    project: {
+                        key: projectKey
+                    },
+                    summary: taskSummary,
+                    description: {
+                        type: 'doc',
+                        version: 1,
+                        content: [
+                            {
+                                type: 'paragraph',
+                                content: [
+                                    {
+                                        type: 'text',
+                                        text: taskDescription
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    issuetype: {
+                        name: 'Task'
+                    },
+                    parent: {
+                        key: epicKey
+                    },
+                    assignee: {
+                        accountId: assigneeAccountId
+                    }
+                }
+            };
+
+            // Add story points if provided
+            if (storyPoints !== null && storyPoints !== undefined) {
+                taskData.fields[config.jira.storyPointsFieldId] = storyPoints;
+            }
+
+            const response = await axios.post(
+                `${this.baseUrl}/rest/api/3/issue`,
+                taskData,
+                {
+                    auth: this.auth,
+                    headers: this.headers
+                }
+            );
+
+            return {
+                success: true,
+                data: {
+                    key: response.data.key,
+                    id: response.data.id,
+                    url: this.buildTicketUrl(response.data.key)
+                }
+            };
+        } catch (error) {
+            console.error('Jira API error creating task:', error.response?.data || error.message);
+            return {
+                success: false,
+                error: error.response?.data?.errors || error.message
+            };
+        }
+    }
 }
 
 module.exports = JiraClient;

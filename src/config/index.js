@@ -12,6 +12,7 @@ const config = {
         email: process.env.JIRA_EMAIL,
         apiToken: process.env.JIRA_API_TOKEN,
         projectKey: process.env.JIRA_PROJECT_KEY,
+        storyPointsFieldId: process.env.JIRA_STORY_POINTS_FIELD_ID || 'customfield_10014', // Default to common field ID
     },
     app: {
         port: process.env.PORT || 3000,

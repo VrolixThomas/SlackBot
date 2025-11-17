@@ -2,16 +2,18 @@ const { App } = require('@slack/bolt');
 const { config, validateConfig } = require('./config');
 
 // Import handlers
-const requestCommandHandler = require('./handlers/commands/request.js');
+//const requestCommandHandler = require('./handlers/commands/request.js');
 const standupCommandHandler = require('./handlers/commands/standup.js');
-const statusActionHandler = require('./handlers/actions/status.js');
-const priorityActionHandler = require('./handlers/actions/priority.js');
-const assigneeActionHandler = require('./handlers/actions/assignee.js');
-const submitActionHandler = require('./handlers/actions/submit.js');
-const messageInterceptHandler = require('./handlers/messages/intercept.js');
-const { transferShortcutHandler, handleTransferModal } = require('./handlers/shortcuts/transfer');
-const { jiraShortcutHandler, handleJiraTicketModalSubmission } = require('./handlers/shortcuts/jira');
+const providerCommandHandler = require('./handlers/commands/provider.js');
+//const statusActionHandler = require('./handlers/actions/status.js');
+//const priorityActionHandler = require('./handlers/actions/priority.js');
+//const assigneeActionHandler = require('./handlers/actions/assignee.js');
+//const submitActionHandler = require('./handlers/actions/submit.js');
+//const messageInterceptHandler = require('./handlers/messages/intercept.js');
+//const { transferShortcutHandler, handleTransferModal } = require('./handlers/shortcuts/transfer');
+//const { jiraShortcutHandler, handleJiraTicketModalSubmission } = require('./handlers/shortcuts/jira');
 const { handleStandupModalSubmission } = require('./handlers/modals/standup');
+const { handleProviderModalSubmission } = require('./handlers/modals/provider');
 
 // Validate configuration
 try {
@@ -32,6 +34,7 @@ const app = new App({
 // Register handlers
 //app.command('/request', requestCommandHandler);
 app.command('/standup', standupCommandHandler);
+app.command('/provider', providerCommandHandler);
 //app.shortcut('create_jira_ticket', jiraShortcutHandler);
 //app.shortcut('transfer', transferShortcutHandler);
 //app.action('status_select', statusActionHandler);
@@ -42,6 +45,7 @@ app.command('/standup', standupCommandHandler);
 //app.view('transfer_request_modal', handleTransferModal);
 //app.view('jira_ticket_modal', handleJiraTicketModalSubmission);
 app.view('standup_modal', handleStandupModalSubmission);
+app.view('provider_modal', handleProviderModalSubmission);
 
 // Start the app
 (async () => {
