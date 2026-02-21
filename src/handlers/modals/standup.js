@@ -33,6 +33,7 @@ const handleStandupModalSubmission = async ({ ack, body, client, view }) => {
     
     const blockers = values.blockers?.blockers_input?.value || '';
     const urgent = values.urgent?.urgent_input?.value || '';
+    const reviewPRs = values.review_prs?.review_prs_select?.selected_options || [];
 
     // Determine the date to show - either scheduled date or current date
     const displayDate = scheduleTime ? new Date(scheduleTime * 1000).toDateString() : new Date().toDateString();
@@ -157,19 +158,41 @@ const handleStandupModalSubmission = async ({ ack, body, client, view }) => {
         });
     }
 
-    // Open PRs section
+    // Open PRs section — grouped by review status, then by repo
     if (bitbucketPRs.data.length > 0) {
-        const prList = bitbucketPRs.data.map(pr => 
-            `• <${pr.url}|${pr.title}> - ${pr.repository} (${pr.status})`
-        ).join('\n');
-        
-        standupBlocks.push({
-            type: "section",
-            text: {
-                type: "mrkdwn",
-                text: `*Open Pull Requests:*\n${prList}`
+        const reviewPRIds = new Set(reviewPRs.map(opt => opt.value.split('|')[0]));
+
+        const needsReview = bitbucketPRs.data.filter(pr => reviewPRIds.has(String(pr.id)));
+        const otherPRs = bitbucketPRs.data.filter(pr => !reviewPRIds.has(String(pr.id)));
+
+        const groupByRepo = (prs) => {
+            const grouped = {};
+            for (const pr of prs) {
+                if (!grouped[pr.repository]) grouped[pr.repository] = [];
+                grouped[pr.repository].push(pr);
             }
-        });
+            return grouped;
+        };
+
+        if (needsReview.length > 0) {
+            const grouped = groupByRepo(needsReview);
+            let text = `:rotating_light: *PRs Needing Review:*`;
+            for (const [repo, prs] of Object.entries(grouped)) {
+                text += `\n_${repo}_`;
+                text += prs.map(pr => `\n  :eyes: *<${pr.url}|${pr.title}>*`).join('');
+            }
+            standupBlocks.push({ type: "section", text: { type: "mrkdwn", text } });
+        }
+
+        if (otherPRs.length > 0) {
+            const grouped = groupByRepo(otherPRs);
+            let text = `*Other Open PRs:*`;
+            for (const [repo, prs] of Object.entries(grouped)) {
+                text += `\n_${repo}_`;
+                text += prs.map(pr => `\n  • <${pr.url}|${pr.title}>`).join('');
+            }
+            standupBlocks.push({ type: "section", text: { type: "mrkdwn", text } });
+        }
     }
 
     // Add reaction section

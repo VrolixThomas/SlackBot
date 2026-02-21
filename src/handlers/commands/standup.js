@@ -1,6 +1,7 @@
 // handlers/commands/standup.js
 
 const JiraClient = require('../../services/jira/client');
+const BitbucketClient = require('../../services/bitbucket/client');
 
 // Function to format status with brackets and styling
 const formatStatus = (status) => {
@@ -62,11 +63,12 @@ const standupCommandHandler = async ({ command, ack, client, body }) => {
     }
    
 
-    // Get real Jira data and mock Bitbucket data
+    // Fetch Jira tickets first (needed for modal open)
     const jiraClient = new JiraClient();
-    let jiraTickets = { success: false, data: [] };
-    var jirauser_accoundId = await jiraClient.GetUserAccountId(last_name)
+    const bitbucketClient = new BitbucketClient();
+    var jirauser_accoundId = await jiraClient.GetUserAccountId(last_name);
 
+    let jiraTickets = { success: false, data: [] };
     if (jirauser_accoundId) {
         try {
             jiraTickets = await jiraClient.getCurrentSprintTicketsForUser(jirauser_accoundId);
@@ -74,8 +76,7 @@ const standupCommandHandler = async ({ command, ack, client, body }) => {
             console.error('Error fetching Jira tickets:', error);
         }
     }
-    
-    //const bitbucketPRs = await bitbucketClient.getOpenPRsForUser(jirauser_accoundId);
+
     // Build Jira ticket options for select menus with status indicators
     const jiraOptions = jiraTickets.success && jiraTickets.data && jiraTickets.data.length > 0 ? 
         jiraTickets.data.map(ticket => {
@@ -281,6 +282,17 @@ const standupCommandHandler = async ({ command, ack, client, body }) => {
             },
             {
                 type: "divider"
+            },
+            {
+                type: "section",
+                block_id: "pr_loading",
+                text: {
+                    type: "mrkdwn",
+                    text: ":hourglass_flowing_sand: _Loading pull requests..._"
+                }
+            },
+            {
+                type: "divider"
             }
         ]
     };
@@ -296,14 +308,71 @@ const standupCommandHandler = async ({ command, ack, client, body }) => {
     }
 
     try {
-        await client.views.open({
+        const viewResult = await client.views.open({
             trigger_id: body.trigger_id,
             view: modal
         });
+
+        // Fetch Bitbucket PRs in the background and update the modal
+        (async () => {
+            try {
+                const bitbucketPRs = await bitbucketClient.getOpenPRsForUser(jirauser_accoundId);
+
+                const prOptions = bitbucketPRs.success && bitbucketPRs.data && bitbucketPRs.data.length > 0 ?
+                    bitbucketPRs.data.map(pr => ({
+                        text: {
+                            type: "plain_text",
+                            text: `${pr.repository}: ${pr.title}`.slice(0, 75)
+                        },
+                        value: `${pr.id}|${pr.title}|${pr.url}|${pr.repository}`.slice(0, 75)
+                    })) : null;
+
+                // Replace the loading block with the PR select or a "no PRs" message
+                const updatedBlocks = modal.blocks.filter(b => b.block_id !== 'pr_loading');
+                const lastDividerIndex = updatedBlocks.length - 1;
+
+                if (prOptions) {
+                    updatedBlocks.splice(lastDividerIndex, 0, {
+                        type: "input",
+                        block_id: "review_prs",
+                        element: {
+                            type: "multi_static_select",
+                            action_id: "review_prs_select",
+                            placeholder: {
+                                type: "plain_text",
+                                text: "Select PRs that need (re)review"
+                            },
+                            options: prOptions
+                        },
+                        label: {
+                            type: "plain_text",
+                            text: "PRs needing review"
+                        },
+                        optional: true
+                    });
+                } else {
+                    updatedBlocks.splice(lastDividerIndex, 0, {
+                        type: "section",
+                        text: {
+                            type: "mrkdwn",
+                            text: "_No open pull requests found._"
+                        }
+                    });
+                }
+
+                await client.views.update({
+                    view_id: viewResult.view.id,
+                    view: { ...modal, blocks: updatedBlocks }
+                });
+            } catch (error) {
+                console.error('Error updating modal with PRs:', error);
+            }
+        })();
+
     } catch (error) {
         console.error('Error opening standup modal:', error);
         console.error('Modal structure:', JSON.stringify(modal, null, 2));
-        
+
         // Send error message to user
         await client.chat.postEphemeral({
             channel: command.channel_id,
