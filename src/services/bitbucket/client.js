@@ -154,7 +154,7 @@ class BitbucketClient {
                         }
                     );
 
-                    const prs = prResponse.data.values || [];
+                    const prs = (prResponse.data.values || []).filter(pr => !pr.draft);
 
                     const formattedPRs = prs.map(pr => ({
                         id: pr.id,

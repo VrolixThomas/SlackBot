@@ -239,7 +239,7 @@ class JiraClient {
     async searchIssues(jql, maxResults = 50) {
         try {
             const response = await axios.get(
-                `${this.baseUrl}/rest/api/3/search`,
+                `${this.baseUrl}/rest/api/3/search/jql`,
                 {
                     params: {
                         jql: jql,
