@@ -1,4 +1,4 @@
-This is the claude readme for this repository.
 This repo implements a slackbot focusing on Jira ticket integration and standup support.
 
-Before doing anything gather the entire context.
+Read the relevant handler and service files before making changes
+Check src/config/ for project-wide settings before modifying behavior
