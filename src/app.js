@@ -5,6 +5,7 @@ const { config, validateConfig } = require('./config');
 //const requestCommandHandler = require('./handlers/commands/request.js');
 const standupCommandHandler = require('./handlers/commands/standup.js');
 const providerCommandHandler = require('./handlers/commands/provider.js');
+const teamstatsCommandHandler = require('./handlers/commands/teamstats.js');
 //const statusActionHandler = require('./handlers/actions/status.js');
 //const priorityActionHandler = require('./handlers/actions/priority.js');
 //const assigneeActionHandler = require('./handlers/actions/assignee.js');
@@ -14,6 +15,7 @@ const providerCommandHandler = require('./handlers/commands/provider.js');
 //const { jiraShortcutHandler, handleJiraTicketModalSubmission } = require('./handlers/shortcuts/jira');
 const { handleStandupModalSubmission } = require('./handlers/modals/standup');
 const { handleProviderModalSubmission } = require('./handlers/modals/provider');
+const { handleTeamStatsModalSubmission } = require('./handlers/modals/teamstats');
 
 // Validate configuration
 try {
@@ -35,6 +37,7 @@ const app = new App({
 //app.command('/request', requestCommandHandler);
 app.command('/standup', standupCommandHandler);
 app.command('/provider', providerCommandHandler);
+app.command('/teamstats', teamstatsCommandHandler);
 //app.shortcut('create_jira_ticket', jiraShortcutHandler);
 //app.shortcut('transfer', transferShortcutHandler);
 //app.action('status_select', statusActionHandler);
@@ -46,6 +49,7 @@ app.command('/provider', providerCommandHandler);
 //app.view('jira_ticket_modal', handleJiraTicketModalSubmission);
 app.view('standup_modal', handleStandupModalSubmission);
 app.view('provider_modal', handleProviderModalSubmission);
+app.view('teamstats_modal', handleTeamStatsModalSubmission);
 
 // Start the app
 (async () => {

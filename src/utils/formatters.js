@@ -29,10 +29,21 @@ function formatJiraDescription(messageText, threadMessages) {
     return description;
 }
 
+function formatStatsHeader(period, teamName) {
+    const periodLabels = {
+        'weekly': 'Weekly',
+        'monthly': 'Monthly',
+        'sprint': 'Sprint'
+    };
+    const label = periodLabels[period] || 'Custom';
+    return `${label} Statistics Report - ${teamName || 'Team'}`;
+}
+
 module.exports = {
     capitalize,
     cleanMessageText,
     createSummary,
     buildSlackThreadUrl,
-    formatJiraDescription
+    formatJiraDescription,
+    formatStatsHeader,
 };
