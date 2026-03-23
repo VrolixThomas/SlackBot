@@ -1,5 +1,11 @@
 const { capitalize } = require('../utils/formatters');
 
+const STAT_PERIODS = {
+    WEEKLY: 'weekly',
+    MONTHLY: 'monthly',
+    SPRINT: 'sprint'
+};
+
 const PRIORITIES = {
     LOW: 'low',
     MEDIUM: 'medium',
@@ -73,14 +79,27 @@ function getStatusOptions() {
         value: status
     }));
 }
+// Helper function to get stat period options
+function getStatPeriodOptions() {
+    return Object.values(STAT_PERIODS).map(period => ({
+        text: {
+            type: 'plain_text',
+            text: capitalize(period)
+        },
+        value: period
+    }));
+}
+
 module.exports = {
     PRIORITIES,
     STATUSES,
     REQUEST_TYPES,
+    STAT_PERIODS,
     PRIORITY_SHORTCUTS,
     TYPE_SHORTCUTS,
     REQUEST_TYPE_ICONS,
     getRequestTypeOptions,
     getPriorityOptions,
     getStatusOptions,
+    getStatPeriodOptions,
 };
